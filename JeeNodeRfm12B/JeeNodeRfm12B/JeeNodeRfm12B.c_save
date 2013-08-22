@@ -1,0 +1,37 @@
+/*
+ * JeeNodeRfm12B.cpp
+ *
+ * Created: 8/10/2013 1:09:28 PM
+ *  Author: Bollenbacher Software Engineering
+ */ 
+
+#define F_CPU 16000000L
+
+#include <avr/io.h>
+#include <util/delay.h>		// Including the delay lib
+#include "pin.h"
+#include "led.h"
+#include "serial.h"
+
+int main (void) {
+	int Count = 0;
+	//Pin RedLedPin = {PORT_C, PIN_1, OUTPUT_MODE, LOW};   // jeenode - port2 red LED
+	Pin GreenLedPin = {PORT_D, PIN_5, OUTPUT_MODE, LOW};   // jeenode - port2 green LED
+	//Led GreenLed (&GreenLedPin);
+	
+	SetPinMode (&GreenLedPin);
+	
+	SerialInit (57600);
+	
+	SendString ("JeeNodeRfm12B (1.0 wcb)\n");
+
+	while(1) {
+		//GreenLed.on();
+		SendString ("Blinking for the ");
+		SendInt (++Count);
+		SendString ("th time!\n");
+		_delay_ms (2000);
+		//GreenLed.off();
+		_delay_ms (500);
+		}
+	}

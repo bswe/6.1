@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Atmel Studio Solution File, Format Version 11.00
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "HANDSONSESSION1", "HANDSONSESSION1\HANDSONSESSION1.cproj", "{5AD8EC0E-D375-4B8D-8484-ED61FDAF5F8E}"
+EndProject
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "THERMOSTAT1", "THERMOSTAT1\THERMOSTAT1.cproj", "{96E4CD06-8648-4AE5-B6B8-542FACB6319A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM = Debug|ARM
+		Release|ARM = Release|ARM
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5AD8EC0E-D375-4B8D-8484-ED61FDAF5F8E}.Debug|ARM.ActiveCfg = Debug|ARM
+		{5AD8EC0E-D375-4B8D-8484-ED61FDAF5F8E}.Debug|ARM.Build.0 = Debug|ARM
+		{5AD8EC0E-D375-4B8D-8484-ED61FDAF5F8E}.Release|ARM.ActiveCfg = Release|ARM
+		{5AD8EC0E-D375-4B8D-8484-ED61FDAF5F8E}.Release|ARM.Build.0 = Release|ARM
+		{96E4CD06-8648-4AE5-B6B8-542FACB6319A}.Debug|ARM.ActiveCfg = Debug|ARM
+		{96E4CD06-8648-4AE5-B6B8-542FACB6319A}.Debug|ARM.Build.0 = Debug|ARM
+		{96E4CD06-8648-4AE5-B6B8-542FACB6319A}.Release|ARM.ActiveCfg = Release|ARM
+		{96E4CD06-8648-4AE5-B6B8-542FACB6319A}.Release|ARM.Build.0 = Release|ARM
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
