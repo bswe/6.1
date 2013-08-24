@@ -38,11 +38,11 @@
 #define GREEN_LED_PIN PIN_INFO(PORT_D, PIN_5, OUTPUT_MODE, ACTIVE_LOW)  // jeenode - port2 green LED
 
 uint8_t StrBfr[50];
-unsigned char Input[MAX_PACKET_SIZE+1];
+uint8_t Input[MAX_PACKET_SIZE+1];
 Rfm12b Radio;
 
 void DisplayInput () {
-	unsigned char Length, i;
+	uint8_t Length, i;
 		
 	Length = Radio.Recv (&Input[0]);
 	if (Length > 0) {
@@ -60,15 +60,15 @@ void DisplayInput () {
 	}
 
 int main (void) {
-	int Count = 0;
-	unsigned char Char;
+	uint16_t Count = 0;
+	uint8_t Char;
 		
 	InitPinInActive (RED_LED_PIN);
 	InitPinInActive (GREEN_LED_PIN);
 	
 	SerialInit (57600);
 
-	SendString (UI8_P("JeeNodeRfm12B (1.1 wcb)\r\n"));
+	SendString (UI8_P("JeeNodeRfm12B (1.3 wcb)\r\n"));
 	SendString (UI8_P("(s)end, (r)eset\r\n"));
 	
 	Radio.Initialize ();
@@ -83,8 +83,10 @@ int main (void) {
 				}
 			else if (Char == 's') {
 			    sprintf ((char*) StrBfr, "%3d", Count);
-                if (Radio.Send (StrBfr, strlen((char*) StrBfr))) 
-				    SendStringAndInt (UI8_P("Sent data "), Count++, UI8_P("\r\n"));
+                if ((Char = Radio.Send (StrBfr, strlen((char*) StrBfr)))) {
+		            sprintf ((char*) StrBfr, "Sent data %d, result=%d\r\n", Count++, Char);
+			        SendString (StrBfr);
+                    }                    
                 else 
 				    SendStringAndInt (UI8_P("Could not send data "), Count++, UI8_P("\r\n"));
 				SetPinActive (GREEN_LED_PIN);
