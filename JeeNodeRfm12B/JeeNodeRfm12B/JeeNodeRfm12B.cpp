@@ -41,6 +41,7 @@
 uint8_t StrBfr[50];
 uint8_t Input[MAX_MAC_PACKET_SIZE];
 Rfm12b Radio;
+Mac MacLayer;
 
 
 void DisplayInput () {
@@ -66,12 +67,12 @@ void DisplayInput () {
 	}
 
 
-uint8_t SendPacket (uint8_t* Packet, uint8_t Length) {
+uint8_t SendPacket (uint8_t* Packet) {
     #define MAX_ATTEMPTS 50
     int8_t AttemptCount = 0, BytesSent;
     
     while (MAX_ATTEMPTS > AttemptCount++) {
-        if ((BytesSent = Radio.Send (Packet, Length)))
+        if ((BytesSent = Radio.Send (Packet)))
             return BytesSent;
         _delay_ms (100);    // TODO: change this to a sleep
         }        
@@ -80,8 +81,8 @@ uint8_t SendPacket (uint8_t* Packet, uint8_t Length) {
 
 
 int main (void) {
-    #define NUMBER_TO_SEND 4
-    uint16_t Count = 0;
+    #define NUMBER_TO_SEND 2
+    uint8_t SequenceNumber;
 	uint8_t Char;
     char NumberSent = 0;
 		
@@ -90,7 +91,7 @@ int main (void) {
 	
 	SerialInit (57600);
 
-	SendString (UI8_P("JeeNodeRfm12B (1.4 wcb)\r\n"));
+	SendString (UI8_P("JeeNodeRfm12B (1.5 wcb)\r\n"));
 	SendString (UI8_P("(s)end, (r)eset\r\n"));
 	
 	Radio.Initialize ();
@@ -106,14 +107,14 @@ int main (void) {
 			    case 's':
                     NumberSent = -1;
                     while (NUMBER_TO_SEND > ++NumberSent) {
-			            sprintf ((char*) StrBfr, "%3d", Count++);
-			            if (0 == SendPacket (StrBfr, strlen((char*) StrBfr))) {
-    			            SendStringAndInt (UI8_P("Could not send data "), Count-1, UI8_P("\r\n"));
+                        SequenceNumber = MacLayer.MakePacket(StrBfr, MAC_REQUEST_PACKET_TYPE, 1, 2, UI8_P("123"), 3);
+			            if (0 == SendPacket (StrBfr)) {
+    			            SendStringAndInt (UI8_P("Could not send data "), SequenceNumber, UI8_P("\r\n"));
     			            break;
 			                }
                         }
                     if (NUMBER_TO_SEND == NumberSent) {
-    			        sprintf ((char*) StrBfr, "Sent data %d\r\n", Count-1);
+    			        sprintf ((char*) StrBfr, "Sent data %d\r\n", SequenceNumber);
     			        SendString (StrBfr);
     			        SetPinActive (GREEN_LED_PIN);
     			        _delay_ms (100);
