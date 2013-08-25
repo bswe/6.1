@@ -181,6 +181,14 @@
       <SubType>compile</SubType>
       <Link>spi.h</Link>
     </Compile>
+    <Compile Include="..\..\..\..\..\..\..\Work\BSE\Atmel\BSE_LIB\wireless_packet.cpp">
+      <SubType>compile</SubType>
+      <Link>wireless_packet.cpp</Link>
+    </Compile>
+    <Compile Include="..\..\..\..\..\..\..\Work\BSE\Atmel\BSE_LIB\wireless_packet.h">
+      <SubType>compile</SubType>
+      <Link>wireless_packet.h</Link>
+    </Compile>
     <Compile Include="JeeNodeRfm12B.cpp">
       <SubType>compile</SubType>
     </Compile>

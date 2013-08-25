@@ -33,12 +33,13 @@
 #include "pin.h"
 #include "serial.h"
 #include "rfm12b.h"
+#include "wireless_packet.h"
 
 #define RED_LED_PIN PIN_INFO(PORT_C, PIN_1, OUTPUT_MODE, ACTIVE_LOW)    // jeenode - port2 red LED
 #define GREEN_LED_PIN PIN_INFO(PORT_D, PIN_5, OUTPUT_MODE, ACTIVE_LOW)  // jeenode - port2 green LED
 
 uint8_t StrBfr[50];
-uint8_t Input[MAX_PACKET_SIZE+1];
+uint8_t Input[MAX_MAC_PACKET_SIZE];
 Rfm12b Radio;
 
 
@@ -79,7 +80,7 @@ uint8_t SendPacket (uint8_t* Packet, uint8_t Length) {
 
 
 int main (void) {
-    #define NUMBER_TO_SEND 2
+    #define NUMBER_TO_SEND 4
     uint16_t Count = 0;
 	uint8_t Char;
     char NumberSent = 0;
