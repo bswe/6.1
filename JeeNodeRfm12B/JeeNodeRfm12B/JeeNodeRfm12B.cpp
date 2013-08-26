@@ -47,23 +47,18 @@ Mac MacLayer;
 void DisplayInput () {
 	uint8_t Length, i;
 		
-	Length = Radio.Recv (&Input[0]);
-	if (Length > 0) {
-		sprintf ((char*) StrBfr, "l=%d, Rcvd= ", Length);
+	Length = Input[0];
+	sprintf ((char*) StrBfr, "l=%d, Rcvd= ", Length);
+	SendString (StrBfr);
+	for (i=0; i < Length; i++) {
+		sprintf ((char*) StrBfr, " %x", Input[i]);
 		SendString (StrBfr);
-		for (i=0; i < Length; i++) {
-			sprintf ((char*) StrBfr, " %x", Input[i]);
-			SendString (StrBfr);
-			}
-		SendString (UI8_P("\r\n"));
-        //Input[Length++] = '\r';
-        //Input[Length++] = '\n';
-        //Input[Length] = 0;
-        //SendString (Input);
-		SetPinActive (GREEN_LED_PIN);
-		_delay_ms (50);
-		SetPinInActive (GREEN_LED_PIN);
 		}
+	SendString (UI8_P("\r\n"));
+    //Input[Length++] = '\r';
+    //Input[Length++] = '\n';
+    //Input[Length] = 0;
+    //SendString (Input);
 	}
 
 
@@ -81,8 +76,8 @@ uint8_t SendPacket (uint8_t* Packet) {
 
 
 int main (void) {
-    #define NUMBER_TO_SEND 2
-    uint8_t SequenceNumber;
+    #define NUMBER_TO_SEND 1
+    uint8_t SequenceNumber = 0;
 	uint8_t Char;
     char NumberSent = 0;
 		
@@ -91,7 +86,7 @@ int main (void) {
 	
 	SerialInit (57600);
 
-	SendString (UI8_P("JeeNodeRfm12B (1.5 wcb)\r\n"));
+	SendString (UI8_P("JeeNodeRfm12B (1.6 wcb)\r\n"));
 	SendString (UI8_P("(s)end, (r)eset\r\n"));
 	
 	Radio.Initialize ();
@@ -107,7 +102,7 @@ int main (void) {
 			    case 's':
                     NumberSent = -1;
                     while (NUMBER_TO_SEND > ++NumberSent) {
-                        SequenceNumber = MacLayer.MakePacket(StrBfr, MAC_REQUEST_PACKET_TYPE, 1, 2, UI8_P("123"), 3);
+                        SequenceNumber = MacLayer.MakeRequestPacket (StrBfr, 1, 2, UI8_P("123"), 3);
 			            if (0 == SendPacket (StrBfr)) {
     			            SendStringAndInt (UI8_P("Could not send data "), SequenceNumber, UI8_P("\r\n"));
     			            break;
@@ -123,6 +118,27 @@ int main (void) {
                 }                    
 		//Radio.DisplayStatus ();
 		//_delay_ms (1000);
-		DisplayInput ();
+		if (Radio.Recv (&Input[0]) > 0) {
+		    DisplayInput ();
+            if ((Input[PACKET_TYPE_INDEX] == MAC_RESPONSE_PACKET_TYPE) &&
+                (Input[PACKET_SEQUENCE_INDEX] == SequenceNumber)) {
+    			sprintf ((char*) StrBfr, "Got ack response for %d\r\n", SequenceNumber);
+    			SendString (StrBfr);
+                }
+            else if (Input[PACKET_TYPE_INDEX] == MAC_REQUEST_PACKET_TYPE) {
+                sprintf ((char*) StrBfr, "Got request packet with sequence %d\r\n", Input[PACKET_SEQUENCE_INDEX]);
+                SendString (StrBfr);
+	            SetPinActive (GREEN_LED_PIN);
+	            _delay_ms (100);
+	            SetPinInActive (GREEN_LED_PIN);
+                MacLayer.MakeResponsePacket (StrBfr, 1, 2, Input[PACKET_SEQUENCE_INDEX], UI8_P("123"), 3);
+			    if (0 == SendPacket (StrBfr)) 
+    			    SendStringAndInt (UI8_P("Could not send response for "), Input[PACKET_SEQUENCE_INDEX], UI8_P("\r\n"));
+                }
+            else {
+    			sprintf ((char*) StrBfr, "Got unexpected packet\r\n");
+    			SendString (StrBfr);
+                }                                
+            }
 		}
 	}
