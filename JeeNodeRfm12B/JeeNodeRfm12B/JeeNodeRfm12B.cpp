@@ -86,7 +86,7 @@ int main (void) {
 	
 	SerialInit (57600);
 
-	SendString (UI8_P("JeeNodeRfm12B (1.6 wcb)\r\n"));
+	SendString (UI8_P("JeeNodeRfm12B (1.7 wcb)\r\n"));
 	SendString (UI8_P("(s)end, (r)eset\r\n"));
 	
 	Radio.Initialize ();
@@ -105,6 +105,7 @@ int main (void) {
                         SequenceNumber = MacLayer.MakeRequestPacket (StrBfr, 1, 2, UI8_P("123"), 3);
 			            if (0 == SendPacket (StrBfr)) {
     			            SendStringAndInt (UI8_P("Could not send data "), SequenceNumber, UI8_P("\r\n"));
+                            NumberSent = -1;
     			            break;
 			                }
                         }
@@ -116,14 +117,15 @@ int main (void) {
     			        SetPinInActive (GREEN_LED_PIN);
                         } 
                 }                    
-		//Radio.DisplayStatus ();
-		//_delay_ms (1000);
 		if (Radio.Recv (&Input[0]) > 0) {
 		    DisplayInput ();
             if ((Input[PACKET_TYPE_INDEX] == MAC_RESPONSE_PACKET_TYPE) &&
                 (Input[PACKET_SEQUENCE_INDEX] == SequenceNumber)) {
     			sprintf ((char*) StrBfr, "Got ack response for %d\r\n", SequenceNumber);
     			SendString (StrBfr);
+		        //Radio.DisplayStatus ();
+                //Radio.ResetStatus();
+                //NumberSent = 0;
                 }
             else if (Input[PACKET_TYPE_INDEX] == MAC_REQUEST_PACKET_TYPE) {
                 sprintf ((char*) StrBfr, "Got request packet with sequence %d\r\n", Input[PACKET_SEQUENCE_INDEX]);
@@ -140,5 +142,10 @@ int main (void) {
     			SendString (StrBfr);
                 }                                
             }
+        //else if (NumberSent > 0) {
+		    //Radio.DisplayStatus ();
+            //Radio.ResetStatus();
+            //NumberSent = 0;
+            //}            
 		}
 	}
