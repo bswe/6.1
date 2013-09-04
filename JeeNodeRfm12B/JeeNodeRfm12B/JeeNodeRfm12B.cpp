@@ -38,7 +38,7 @@
 #define RED_LED_PIN PIN_INFO(PORT_C, PIN_1, OUTPUT_MODE, ACTIVE_LOW)    // jeenode - port2 red LED
 #define GREEN_LED_PIN PIN_INFO(PORT_D, PIN_5, OUTPUT_MODE, ACTIVE_LOW)  // jeenode - port2 green LED
 
-uint8_t StrBfr[50];
+uint8_t StrBfr[50], PacketBfr[MAX_MAC_PACKET_SIZE];
 uint8_t Input[MAX_MAC_PACKET_SIZE];
 Rfm12b Radio;
 Mac MacLayer;
@@ -62,60 +62,89 @@ void DisplayInput () {
 	}
 
 
-uint8_t SendPacket (uint8_t* Packet) {
+uint8_t SendPacket (uint8_t* Packet, uint8_t SequenceNumber) {
     #define MAX_ATTEMPTS 50
     int8_t AttemptCount = 0, BytesSent;
     
     while (MAX_ATTEMPTS > AttemptCount++) {
-        if ((BytesSent = Radio.Send (Packet)))
+        if ((BytesSent = Radio.Send (Packet))) {
+    	    SendStringAndInt (UI8_P("Sent data "), SequenceNumber, UI8_P("\r\n"));
             return BytesSent;
+            }            
         _delay_ms (100);    // TODO: change this to a sleep
         }        
+    SendStringAndInt (UI8_P("Could not send data "), SequenceNumber, UI8_P("\r\n"));
     return 0;
     }
-
+    
 
 int main (void) {
-    #define NUMBER_TO_SEND 1
     uint8_t SequenceNumber = 0;
 	uint8_t Char;
-    char NumberSent = 0;
-		
+    int8_t NumberSent = 0, NumberToSend = 0, LoopCount = 0, UnexpectedPacketCount = 0, NoAckCount = 0;
+    		
 	InitPinInActive (RED_LED_PIN);
 	InitPinInActive (GREEN_LED_PIN);
 	
 	SerialInit (57600);
 
-	SendString (UI8_P("JeeNodeRfm12B (1.7 wcb)\r\n"));
-	SendString (UI8_P("(s)end, (r)eset\r\n"));
+	SendString (UI8_P("JeeNodeRfm12B (1.8 wcb)\r\n"));
+	SendString (UI8_P("a(uto-test), e(nd-test), (r)eset, [n](s)end\r\n"));
 	
 	Radio.Initialize ();
 	
 	while(1) {
 		if ((Char = ReadChar())) 
 			switch (Char) {
+                case 'a':
+                    if (NumberToSend == -1)
+                        break;
+                    SendString (UI8_P("Starting auto-test\r\n"));
+                    NumberToSend = -1;
+                    SequenceNumber = MacLayer.MakeRequestPacket (PacketBfr, 1, 2, UI8_P("123"), 3);
+                    SendPacket (PacketBfr, SequenceNumber);
+                    LoopCount = UnexpectedPacketCount = NoAckCount = 0;
+	                SetPinActive (GREEN_LED_PIN);
+                    break;
+                case 'e':
+                    if (NumberToSend == 0)
+                        break;
+                    SendString (UI8_P("Ending auto-test\r\n"));
+                    sprintf ((char*) StrBfr, "unexpected # = %d, no_ack # =  %d\r\n", UnexpectedPacketCount, NoAckCount);
+                    SendString (StrBfr);
+                    NumberToSend = 0;
+                    break;
                 case 'r': 
 				    SendString (UI8_P("RESETING!\r\n"));
 				    cli();                  // irq's off
 				    wdt_enable (WDTO_15MS); // watch dog on, 15ms
 				    while(1);               // loop until watch dog fires
 			    case 's':
+                    if (NumberToSend <= 0)
+                        NumberToSend = 1;
+                    SendStringAndInt (UI8_P("Sending "), NumberToSend, UI8_P(" packets\r\n"));
                     NumberSent = -1;
-                    while (NUMBER_TO_SEND > ++NumberSent) {
-                        SequenceNumber = MacLayer.MakeRequestPacket (StrBfr, 1, 2, UI8_P("123"), 3);
-			            if (0 == SendPacket (StrBfr)) {
-    			            SendStringAndInt (UI8_P("Could not send data "), SequenceNumber, UI8_P("\r\n"));
+                    while (NumberToSend > ++NumberSent) {
+                        SequenceNumber = MacLayer.MakeRequestPacket (PacketBfr, 1, 2, UI8_P("123"), 3);
+			            if (0 == SendPacket (PacketBfr, SequenceNumber)) {
                             NumberSent = -1;
     			            break;
 			                }
                         }
-                    if (NUMBER_TO_SEND == NumberSent) {
-    			        sprintf ((char*) StrBfr, "Sent data %d\r\n", SequenceNumber);
-    			        SendString (StrBfr);
+                    if (NumberToSend == NumberSent) {
     			        SetPinActive (GREEN_LED_PIN);
     			        _delay_ms (100);
     			        SetPinInActive (GREEN_LED_PIN);
                         } 
+                    NumberToSend = 0;
+                    break;
+                default :
+                    if ((0x30 <= Char) && (Char <= 0x39))
+                        NumberToSend = (NumberToSend * 10) + Char - 0x30;
+                    else {
+    			        sprintf ((char*) StrBfr, "Unexpected input character %c\r\n", Char);
+    			        SendString (StrBfr);
+                        }                        
                 }                    
 		if (Radio.Recv (&Input[0]) > 0) {
 		    DisplayInput ();
@@ -123,6 +152,13 @@ int main (void) {
                 (Input[PACKET_SEQUENCE_INDEX] == SequenceNumber)) {
     			sprintf ((char*) StrBfr, "Got ack response for %d\r\n", SequenceNumber);
     			SendString (StrBfr);
+                if (NumberToSend < 0) {
+                    _delay_ms (100);
+                    SequenceNumber = MacLayer.MakeRequestPacket (PacketBfr, 1, 2, UI8_P("123"), 3);
+                    SendPacket (PacketBfr, SequenceNumber);
+	                SetPinActive (GREEN_LED_PIN);
+                    LoopCount = 0;
+                    }
 		        //Radio.DisplayStatus ();
                 //Radio.ResetStatus();
                 //NumberSent = 0;
@@ -131,16 +167,30 @@ int main (void) {
                 sprintf ((char*) StrBfr, "Got request packet with sequence %d\r\n", Input[PACKET_SEQUENCE_INDEX]);
                 SendString (StrBfr);
 	            SetPinActive (GREEN_LED_PIN);
-	            _delay_ms (100);
-	            SetPinInActive (GREEN_LED_PIN);
-                MacLayer.MakeResponsePacket (StrBfr, 1, 2, Input[PACKET_SEQUENCE_INDEX], UI8_P("123"), 3);
-			    if (0 == SendPacket (StrBfr)) 
+                LoopCount = 0;
+                SequenceNumber = Input[PACKET_SEQUENCE_INDEX];
+                MacLayer.MakeResponsePacket (PacketBfr, 1, 2, SequenceNumber, UI8_P("123"), 3);
+			    if (0 == SendPacket (PacketBfr, SequenceNumber)) 
     			    SendStringAndInt (UI8_P("Could not send response for "), Input[PACKET_SEQUENCE_INDEX], UI8_P("\r\n"));
                 }
             else {
-    			sprintf ((char*) StrBfr, "Got unexpected packet\r\n");
+    			sprintf ((char*) StrBfr, "\r\nGot unexpected packet !!!!!!!!!!!!!!!!!!!!!!\r\n\n");
     			SendString (StrBfr);
+                UnexpectedPacketCount++;
                 }                                
+            }
+        _delay_ms (10);
+        LoopCount++;
+        if (LoopCount == 10)
+            SetPinInActive (GREEN_LED_PIN);
+        else if ((NumberToSend < 0) && (LoopCount == 100)) {
+    	    SendStringAndInt (UI8_P("!!!!!!!!!!!!!!!!!!!!!!! Did not get Ack for "), 
+                              SequenceNumber, 
+                              UI8_P(" !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\r\n"));
+            NoAckCount++;
+            SendPacket (PacketBfr, SequenceNumber);
+            LoopCount = 0;
+	        SetPinActive (GREEN_LED_PIN);
             }
         //else if (NumberSent > 0) {
 		    //Radio.DisplayStatus ();
